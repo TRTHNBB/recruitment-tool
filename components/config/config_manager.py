@@ -2,12 +2,13 @@ import inspect
 import json
 from logging import Logger
 from os import path
+from typing import Any
 
 from .config_model import ConfigData
 
 
 class ObjectEncoder(json.JSONEncoder):
-    def default(self, obj):
+    def default(self, obj: Any) -> Any:
         if hasattr(obj, "to_json"):
             return self.default(obj.to_json())
         elif hasattr(obj, "__dict__"):

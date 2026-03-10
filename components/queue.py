@@ -8,11 +8,13 @@ import re
 import threading
 import time
 
+from collections.abc import Iterator
 from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from httpx_sse import connect_sse, ServerSentEvent
-from typing import List, Self
+from types import TracebackType
+from typing import Any, List, Self
 from stamina import retry
 
 from components.errors import EmptyQueue
@@ -35,10 +37,10 @@ class Event:
     timestamp: int
 
     @classmethod
-    def from_json(cls, dct) -> Self:
+    def from_json(cls, dct: dict[str, Any]) -> Self:
         return cls(dct["id"], dct["htmlStr"], dct["str"], int(dct["time"]))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Event id={self.id} data={self.str}>"
 
 
@@ -70,14 +72,14 @@ class Queue:
     _nations: List[Nation]
     _last_updated: datetime
 
-    def __init__(self, whitelist: List[str] = []):
+    def __init__(self, whitelist: List[str] = []) -> None:
         self._nations = []
         self._whitelist = whitelist
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Queue nations={len(self._nations)}>"
 
-    def update(self, nation: Nation):
+    def update(self, nation: Nation) -> None:
         if nation.region not in self._whitelist:
             self._nations.insert(0, nation)
 
@@ -99,38 +101,38 @@ class Queue:
     def get_nation_names(self) -> List[str]:
         return [nation.name for nation in self._nations]
 
-    def prune(self):
+    def prune(self) -> None:
         current_time = datetime.now(timezone.utc)
 
         self._nations = [nation for nation in self._nations if (current_time - nation.founding_time).total_seconds() < 3600]
 
-    def purge(self):
+    def purge(self) -> None:
         self._nations = []
 
-    def add_to_whitelist(self, region: str):
+    def add_to_whitelist(self, region: str) -> None:
         self._whitelist.append(region)
 
-    def remove_from_whitelist(self, region: str):
+    def remove_from_whitelist(self, region: str) -> None:
         self._whitelist.remove(region)
 
-    def handle_move(self, nation_name: str, destination: str):
+    def handle_move(self, nation_name: str, destination: str) -> None:
         if destination in self._whitelist:
             self._nations = [nation for nation in self._nations if nation.name != nation_name]
 
             self._last_updated = datetime.now(timezone.utc)
 
-    def handle_founding(self, nation: Nation):
+    def handle_founding(self, nation: Nation) -> None:
         if nation.region not in self._whitelist:
             self._nations.insert(0, nation)
 
             self._last_updated = datetime.now(timezone.utc)
 
     @property
-    def whitelist(self):
+    def whitelist(self) -> list[str]:
         return self._whitelist
 
     @property
-    def last_updated(self):
+    def last_updated(self) -> datetime:
         return self._last_updated
 
 
@@ -143,17 +145,17 @@ class QueueManager(AbstractAsyncContextManager):
     _update_thread: threading.Thread
     _running: bool
 
-    def __init__(self, pool: aiomysql.Pool):
+    def __init__(self, pool: aiomysql.Pool) -> None:
         self._whitelist = []
         self._pool = pool
         self._queues = {}
         self._queue_lock = threading.Lock()
         self._running = True
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<QueueList queues={self._queues}>"
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute("SELECT channelId FROM recruitment_channels;")
@@ -180,14 +182,19 @@ class QueueManager(AbstractAsyncContextManager):
 
         return self
 
-    async def __aexit__(self, exc_t, exc_v, exc_tb):
+    async def __aexit__(
+        self,
+        exc_t: type[BaseException] | None,
+        exc_v: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         self._running = False
 
     @property
-    def global_whitelist(self):
+    def global_whitelist(self) -> list[str]:
         return self._whitelist
 
-    async def add_to_global_whitelist(self, region: str):
+    async def add_to_global_whitelist(self, region: str) -> None:
         region = region.lower().replace(" ", "_")
 
         if region not in self._whitelist:
@@ -197,7 +204,7 @@ class QueueManager(AbstractAsyncContextManager):
 
             self._whitelist.append(region)
 
-    async def remove_from_global_whitelist(self, region: str):
+    async def remove_from_global_whitelist(self, region: str) -> None:
         region = region.lower().replace(" ", "_")
 
         if region in self._whitelist:
@@ -207,7 +214,7 @@ class QueueManager(AbstractAsyncContextManager):
 
             self._whitelist.remove(region)
 
-    async def add_to_channel_whitelist(self, channel_id: int, region: str):
+    async def add_to_channel_whitelist(self, channel_id: int, region: str) -> None:
         region = region.strip().lower().replace(" ", "_")
 
         if region in self._whitelist:
@@ -227,7 +234,7 @@ class QueueManager(AbstractAsyncContextManager):
 
         self._queues[channel_id].whitelist.append(region)
 
-    async def remove_from_channel_whitelist(self, channel_id: int, region: str):
+    async def remove_from_channel_whitelist(self, channel_id: int, region: str) -> None:
         region = region.strip().lower().replace(" ", "_")
 
         if region not in self._queues[channel_id].whitelist:
@@ -244,14 +251,14 @@ class QueueManager(AbstractAsyncContextManager):
 
         self._queues[channel_id].whitelist.remove(region)
 
-    def list_whitelist(self, channel_id: int):
+    def list_whitelist(self, channel_id: int) -> tuple[list[str], list[str]]:
         return (self._whitelist, self._queues[channel_id].whitelist)
 
     def channel(self, channel_id: int) -> Queue:
         with self._queue_lock:
             return self._queues[channel_id]
 
-    def add_channel(self, channel_id: int, regions: List[str]):
+    def add_channel(self, channel_id: int, regions: List[str]) -> None:
         with self._queue_lock:
             self._queues[channel_id] = Queue(whitelist=regions)
 
@@ -263,7 +270,7 @@ class QueueManager(AbstractAsyncContextManager):
         with self._queue_lock:
             return self._queues[channel_id].get_nation_count()
 
-    def _handle_founding(self, event: FoundingEvent):
+    def _handle_founding(self, event: FoundingEvent) -> None:
         if PUPPET_REGEX.match(event.nation):
             logger.debug("likely puppet founding found; skipping: %s", event.nation)
             return
@@ -276,7 +283,7 @@ class QueueManager(AbstractAsyncContextManager):
             for _, queue in self._queues.items():
                 queue.handle_founding(Nation(event.nation, event.region, event.timestamp.astimezone(timezone.utc)))
 
-    def _handle_move(self, event: MoveEvent):
+    def _handle_move(self, event: MoveEvent) -> None:
         if PUPPET_REGEX.match(event.nation):
             logger.debug("likely puppet move found; skipping: %s", event.nation)
             return
@@ -289,7 +296,7 @@ class QueueManager(AbstractAsyncContextManager):
             for _, queue in self._queues.items():
                 queue.handle_move(event.nation, event.moved_to)
 
-    def _handle_event(self, ev: ServerSentEvent):
+    def _handle_event(self, ev: ServerSentEvent) -> None:
         event: Event = json.loads(ev.data, object_hook=Event.from_json)
 
         if match := FOUNDING_REGEX.match(event.str):
@@ -300,7 +307,7 @@ class QueueManager(AbstractAsyncContextManager):
         if not self._running:
             raise asyncio.CancelledError()
 
-    def _update(self):
+    def _update(self) -> None:
         logger.info("starting update thread")
 
         with httpx.Client(headers=HEADERS, timeout=None) as client:
@@ -308,7 +315,7 @@ class QueueManager(AbstractAsyncContextManager):
                 self._handle_event(event)
 
 
-def sse_retrying(client, method, url):
+def sse_retrying(client: httpx.Client, method: str, url: str) -> Iterator[ServerSentEvent]:
     last_event_id = ""
     reconnection_delay = 0.0
 

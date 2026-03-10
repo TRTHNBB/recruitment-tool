@@ -1,4 +1,4 @@
-from typing import Dict, List, Type, TypeVar
+from typing import Any, Dict, List, Type, TypeVar
 
 T = TypeVar("T", bound="ConfigData")
 
@@ -54,7 +54,7 @@ class ConfigData:
         return self._global_administrators
 
     @classmethod
-    def from_dict(cls: Type[T], dict: Dict) -> T:
+    def from_dict(cls: Type[T], dict: Dict[str, Any]) -> T:
         return cls(
             db_host=dict["db_host"],
             db_port=dict["db_port"],
@@ -71,16 +71,16 @@ class ConfigData:
 
     def __init__(
         self,
-        db_host="",
-        db_port=0,
-        db_user="",
-        db_password="",
-        db_name="",
-        operator="",
-        polling_rate=0,
-        period_max=0,
-        bot_token="",
-        global_administrators=[],
+        db_host: str = "",
+        db_port: int = 0,
+        db_user: str = "",
+        db_password: str = "",
+        db_name: str = "",
+        operator: str = "",
+        polling_rate: int = 0,
+        period_max: int = 0,
+        bot_token: str = "",
+        global_administrators: list[int] = [],
     ) -> None:
         self._db_host = db_host
         self._db_port = db_port

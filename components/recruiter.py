@@ -12,7 +12,7 @@ class Recruiter:
     next_recruitment_at: datetime
     founded_time: datetime
 
-    def get_cooldown(self, nation_count: int = 8):
+    def get_cooldown(self, nation_count: int = 8) -> int | float:
         # cooldown per nation starts at approximately 14 seconds and decreases linearly until it is 5 seconds
         # when the nation is 18 months old
         seconds = (datetime.now(timezone.utc) - self.founded_time).days / 60

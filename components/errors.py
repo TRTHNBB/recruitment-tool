@@ -5,14 +5,14 @@ from discord.ext import commands
 
 
 class EmptyQueue(commands.CommandError):
-    def __init__(self, user: discord.User):
+    def __init__(self, user: discord.User) -> None:
         self.user = user
 
         super().__init__(message=f"queue empty")
 
 
 class LastRecruitmentTooRecent(commands.CommandError):
-    def __init__(self, user: discord.User, reset_in: float):
+    def __init__(self, user: discord.User, reset_in: float) -> None:
         self.user = user
         self.reset_in = reset_in
 
@@ -20,28 +20,28 @@ class LastRecruitmentTooRecent(commands.CommandError):
 
 
 class NoRecruiterRole(commands.CommandError):
-    def __init__(self, user: discord.User):
+    def __init__(self, user: discord.User) -> None:
         self.user = user
 
         super().__init__(message=f"{self.user.name} missing the recruiter role")
 
 
 class NotRecruitManager(commands.CommandError):
-    def __init__(self, user: discord.User):
+    def __init__(self, user: discord.User) -> None:
         self.user = user
 
         super().__init__(message=f"{self.user.name} is not a recruit manager")
 
 
 class NotRegistered(commands.CommandError):
-    def __init__(self, user: discord.User):
+    def __init__(self, user: discord.User) -> None:
         self.user = user
 
         super().__init__(message=f"{self.user.name} has not registered as a recruiter")
 
 
 class TooManyRequests(commands.CommandError):
-    def __init__(self, reset_in: float):
+    def __init__(self, reset_in: float) -> None:
         self.reset_in = reset_in
 
         super().__init__(message=f"too many requests made in the current bucket, reset in {reset_in:.2f} seconds.")
@@ -50,7 +50,7 @@ class TooManyRequests(commands.CommandError):
 class NationNotFound(commands.CommandError):
     """Raised when a nation cannot be retrieved via the NationStates API"""
 
-    def __init__(self, user: discord.User, nation: str):
+    def __init__(self, user: discord.User, nation: str) -> None:
         self.user = user
         self.nation = nation
 
@@ -60,7 +60,7 @@ class NationNotFound(commands.CommandError):
 class WhitelistError(app_commands.AppCommandError):
     """Raised when someone attempts to register a recruitment channel in server that is not whitelisted"""
 
-    def __init__(self, user: discord.User | discord.Member, guild: discord.Guild):
+    def __init__(self, user: discord.User | discord.Member, guild: discord.Guild) -> None:
         self.user = user
         self.guild = guild
 

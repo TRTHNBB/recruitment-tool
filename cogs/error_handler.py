@@ -8,12 +8,12 @@ import components.errors as errors
 
 
 class Error(commands.Cog):
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Bot) -> None:
         self.bot = bot
         self.bot.tree.on_error = self.on_error
 
     @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
+    async def on_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
         # self.bot.std.error(error)
         print(error)
         print(type(error))
@@ -38,5 +38,5 @@ class Error(commands.Cog):
             await interaction.response.send_message(f"An error occurred:\n```{error}```\n{type(error)}", ephemeral=True)
 
 
-async def setup(bot: Bot):
+async def setup(bot: Bot) -> None:
     await bot.add_cog(Error(bot))

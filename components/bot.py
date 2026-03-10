@@ -6,7 +6,7 @@ import logging
 from bs4 import BeautifulSoup as bs
 from datetime import datetime, timedelta, timezone
 from discord.ext import commands
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from components.config.config_manager import configInstance
 from components.errors import LastRecruitmentTooRecent, NotRegistered, TooManyRequests
@@ -52,14 +52,14 @@ class Bot(commands.Bot):
     @property
     def request_timestamps(self) -> List[datetime]:
         """A list of timestamps for each request made in the current NS API bucket"""
-        return self.request_timestamps
+        return self._request_timestamps
 
     @property
     def queue_manager(self) -> QueueManager:
         """The recruitment queue"""
         return self._queue_list
 
-    def __init__(self, session: aiohttp.ClientSession, ql: QueueManager, pool: aiomysql.Pool):
+    def __init__(self, session: aiohttp.ClientSession, ql: QueueManager, pool: aiomysql.Pool) -> None:
         intents = discord.Intents.default()
         intents.message_content = True
 
@@ -75,7 +75,7 @@ class Bot(commands.Bot):
         self._request_timestamps = []
         self._queue_list = ql
 
-    async def setup_hook(self):
+    async def setup_hook(self) -> None:
         import cogs.recruit
 
         async with self._pool.acquire() as conn:
@@ -92,7 +92,7 @@ class Bot(commands.Bot):
             await self.load_extension(f"cogs.{cog}")
             print(f"Loaded cog: {cog}")
 
-    async def register_recruitment_channel(self, server_id: int, channel_id: int, message_id: int):
+    async def register_recruitment_channel(self, server_id: int, channel_id: int, message_id: int) -> None:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
                 try:
@@ -138,9 +138,9 @@ class Bot(commands.Bot):
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
                 num = await cur.execute(
-                    """SELECT id 
-                    FROM users 
-                    WHERE discordId = %s 
+                    """SELECT id
+                    FROM users
+                    WHERE discordId = %s
                     AND channelId = (
                         SELECT id FROM recruitment_channels WHERE channelId = %s
                     );""",
@@ -152,7 +152,7 @@ class Bot(commands.Bot):
                 else:
                     return (await cur.fetchone())[0]
 
-    async def get_recruiter(self, user: discord.User, channel_id: int):
+    async def get_recruiter(self, user: discord.User, channel_id: int) -> Recruiter:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
                 num = await cur.execute(
@@ -198,7 +198,7 @@ class Bot(commands.Bot):
 
                 return cooldown
 
-    async def update_telegram_count(self, recruiter: Recruiter, nation_count: int):
+    async def update_telegram_count(self, recruiter: Recruiter, nation_count: int) -> None:
         async with self._pool.acquire() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(
@@ -210,7 +210,7 @@ class Bot(commands.Bot):
                     (recruiter.id, nation_count, recruiter.channel_id),
                 )
 
-    async def get_telegrams(self, start_time: datetime, end_time: datetime, channel_id: int):
+    async def get_telegrams(self, start_time: datetime, end_time: datetime, channel_id: int) -> list[tuple[Any, ...]]:
         if start_time > end_time:
             raise Exception("Start time must be before end time")
 
@@ -224,7 +224,7 @@ class Bot(commands.Bot):
                     AND telegrams.channelId = (
                         SELECT id FROM recruitment_channels WHERE channelId = %s
                     )
-                    GROUP BY users.id 
+                    GROUP BY users.id
                     ORDER BY tgcount DESC;
                     """,
                     (start_time, end_time, channel_id),
@@ -232,7 +232,7 @@ class Bot(commands.Bot):
 
                 return await cur.fetchall()
 
-    async def create_recruitment_response(self, user: discord.User, channel_id: int):
+    async def create_recruitment_response(self, user: discord.User, channel_id: int) -> tuple[discord.Embed, discord.ui.View, int | float]:
         from cogs.recruit import TelegramView
 
         recruiter = await self.get_recruiter(user, channel_id)
@@ -265,7 +265,7 @@ class Bot(commands.Bot):
 
         return embed, view, cooldown
 
-    async def update_status_embeds(self, channel_id: Optional[int] = None):
+    async def update_status_embeds(self, channel_id: Optional[int] = None) -> None:
         """Update status embeds. If `channel_id` is provided, only update the embed for that channel"""
 
         logger.info("Updating status embeds")

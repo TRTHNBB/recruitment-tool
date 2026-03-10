@@ -19,13 +19,13 @@ def is_global_admin(interaction: discord.Interaction) -> bool:
 
 
 class RegisterRecruitmentChannelModal(Modal, title="Register Recruitment Channel"):
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Bot) -> None:
         super().__init__(timeout=None)
         self.bot = bot
 
     region = discord.ui.TextInput(label="Region", min_length=1, max_length=40)
 
-    async def on_submit(self, interaction: discord.Interaction):
+    async def on_submit(self, interaction: discord.Interaction) -> None:
         if self.is_finished() and self.region.value != "":
             raise ValueError("Region cannot be empty")
 
@@ -61,7 +61,7 @@ class RegisterRecruitmentChannelModal(Modal, title="Register Recruitment Channel
 
 
 class RegisterRecruiterModal(Modal, title="Registration"):
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Bot) -> None:
         super().__init__(timeout=None)
         self.bot = bot
 
@@ -75,7 +75,7 @@ class RegisterRecruiterModal(Modal, title="Registration"):
         label="Session Length (in seconds)", placeholder="Session length (45 - 600 seconds)", default="60", min_length=1, max_length=3
     )
 
-    async def on_submit(self, interaction: discord.Interaction):
+    async def on_submit(self, interaction: discord.Interaction) -> None:
         async with self.bot.pool.acquire() as conn:
             async with conn.cursor() as cur:
                 nation = self.nation.value.strip().lower().replace(" ", "_")
@@ -118,13 +118,13 @@ class RegisterRecruiterModal(Modal, title="Registration"):
                 # await conn.commit()
                 await interaction.response.send_message("Registration complete!", ephemeral=True, delete_after=10)
 
-    async def on_error(self, interation: discord.Interaction, error: Exception):
+    async def on_error(self, interation: discord.Interaction, error: Exception) -> None:
         self.bot.std.error(error)
         await interation.response.send_message(f"An error occurred: {error}", ephemeral=True)
 
 
 class ReportModal(Modal, title="Recruitment Report"):
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Bot) -> None:
         super().__init__(timeout=None)
         self.bot = bot
 
@@ -144,7 +144,7 @@ class ReportModal(Modal, title="Recruitment Report"):
         max_length=19,
     )
 
-    async def on_submit(self, interaction: discord.Interaction):
+    async def on_submit(self, interaction: discord.Interaction) -> None:
         start_time = datetime.fromisoformat(self.start_time.value).replace(tzinfo=timezone.utc)
         end_time = datetime.fromisoformat(self.end_time.value).replace(tzinfo=timezone.utc)
 
@@ -155,31 +155,31 @@ class ReportModal(Modal, title="Recruitment Report"):
             f"Recruitment Report: <t:{int(start_time.timestamp())}:f> to <t:{int(end_time.timestamp())}:f>\n```{resp}```", ephemeral=True
         )
 
-    async def on_error(self, interation: discord.Interaction, error: Exception):
+    async def on_error(self, interation: discord.Interaction, error: Exception) -> None:
         logger.error(error)
         await interation.response.send_message(f"An error occurred: {error}", ephemeral=True)
 
 
 class RecruitView(View):
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Bot) -> None:
         super().__init__(timeout=None)
         self.bot = bot
 
     @discord.ui.button(label="Recruit", style=discord.ButtonStyle.blurple, custom_id="recruitment_view:recruit")
-    async def recruit(self, interaction: discord.Interaction, _button: discord.ui.button):
+    async def recruit(self, interaction: discord.Interaction, _button: discord.ui.Button) -> None:
         embed, view, delete_after = await self.bot.create_recruitment_response(interaction.user, interaction.channel_id)
         view.message = await interaction.response.send_message(embed=embed, view=view, ephemeral=True, delete_after=3 + delete_after)
         await self.bot.update_status_embeds(interaction.channel_id)
 
     @discord.ui.button(label="Register", style=discord.ButtonStyle.blurple, custom_id="recruitment_view:register")
-    async def register(self, interaction: discord.Interaction, _button: discord.ui.button):
+    async def register(self, interaction: discord.Interaction, _button: discord.ui.Button) -> None:
         await interaction.response.send_modal(RegisterRecruiterModal(self.bot))
 
     @discord.ui.button(label="Report", style=discord.ButtonStyle.blurple, custom_id="recruitment_view:report")
-    async def report(self, interaction: discord.Interaction, _button: discord.ui.button):
+    async def report(self, interaction: discord.Interaction, _button: discord.ui.Button) -> None:
         await interaction.response.send_modal(ReportModal(self.bot))
 
-    async def on_error(self, interaction: discord.Interaction, error: Exception, _item: discord.ui.Item):
+    async def on_error(self, interaction: discord.Interaction, error: Exception, _item: discord.ui.Item) -> None:
         logger.error(error)
         await interaction.response.send_message(f"An error occurred: {error}", ephemeral=True)
 
@@ -187,31 +187,31 @@ class RecruitView(View):
 class TelegramView(View):
     message: discord.Message
 
-    def __init__(self, cooldown: int | float):
+    def __init__(self, cooldown: int | float) -> None:
         super().__init__(timeout=3 + cooldown)
 
-    async def on_timeout(self):
+    async def on_timeout(self) -> None:
         self.stop()
 
 
 class RecruitmentCog(commands.Cog):
-    def __init__(self, bot: Bot):
+    def __init__(self, bot: Bot) -> None:
         self.bot = bot
 
-    async def cog_load(self):
+    async def cog_load(self) -> None:
         self.refresh_embeds.start()
 
-    async def cog_unload(self):
+    async def cog_unload(self) -> None:
         self.refresh_embeds.stop()
 
     @tasks.loop(seconds=15)
-    async def refresh_embeds(self):
+    async def refresh_embeds(self) -> None:
         await self.bot.update_status_embeds()
 
     @app_commands.command(name="register", description="Register a channel for recruitment")
     @app_commands.guild_only()
     @app_commands.checks.has_permissions(administrator=True)
-    async def register_recruitment_channel(self, interaction: discord.Interaction):
+    async def register_recruitment_channel(self, interaction: discord.Interaction) -> None:
         assert interaction.guild is not None
 
         async with self.bot.pool.acquire() as conn:
@@ -229,7 +229,7 @@ class RecruitmentCog(commands.Cog):
 
     @whitelist_command_group.command(name="add", description="add a region to this channel's ignore list")
     @app_commands.checks.has_permissions(administrator=True)
-    async def add(self, interaction: discord.Interaction, region: str):
+    async def add(self, interaction: discord.Interaction, region: str) -> None:
         if not interaction.channel_id:
             raise app_commands.AppCommandError("command must be run in a channel")
 
@@ -239,7 +239,7 @@ class RecruitmentCog(commands.Cog):
 
     @whitelist_command_group.command(name="remove", description="remove a region from this channel's ignore list")
     @app_commands.checks.has_permissions(administrator=True)
-    async def remove(self, interaction: discord.Interaction, region: str):
+    async def remove(self, interaction: discord.Interaction, region: str) -> None:
         if not interaction.channel_id:
             raise app_commands.AppCommandError("command must be run in a channel")
 
@@ -249,7 +249,7 @@ class RecruitmentCog(commands.Cog):
 
     @whitelist_command_group.command(name="view", description="view this channel's ignore list")
     @app_commands.checks.has_permissions(administrator=True)
-    async def view(self, interaction: discord.Interaction):
+    async def view(self, interaction: discord.Interaction) -> None:
         if not interaction.channel_id:
             raise app_commands.AppCommandError("command must be run in a channel")
 
@@ -261,18 +261,18 @@ class RecruitmentCog(commands.Cog):
 
     @admin_command_group.command(name="ignore", description="add a region to the global ignore list")
     @app_commands.check(is_global_admin)
-    async def ignore(self, interaction: discord.Interaction, region: str):
+    async def ignore(self, interaction: discord.Interaction, region: str) -> None:
         await self.bot.queue_manager.add_to_global_whitelist(region)
 
         await interaction.response.send_message("all set!", ephemeral=True)
 
     @admin_command_group.command(name="unignore", description="remove a region from the global ignore list")
     @app_commands.check(is_global_admin)
-    async def unignore(self, interaction: discord.Interaction, region: str):
+    async def unignore(self, interaction: discord.Interaction, region: str) -> None:
         await self.bot.queue_manager.remove_from_global_whitelist(region)
 
         await interaction.response.send_message("all set!", ephemeral=True)
 
 
-async def setup(bot: Bot):
+async def setup(bot: Bot) -> None:
     await bot.add_cog(RecruitmentCog(bot))
